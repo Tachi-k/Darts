@@ -42,7 +42,7 @@
 </style>
 </head>
 <body>
-<header>ダーツ<br><span class="version">Software Version 20260814-041</span></header>
+<header>ダーツ<br><span class="version">Software Version 20260816-042</span></header>
 
 <div class="app">
   <div class="card left">
@@ -162,10 +162,8 @@ const ctx = canvas.getContext("2d");
 const size = canvas.width, r = size/2, center = {x:r,y:r};
 const COLORS = ["#ff4d6d","#f72585","#b5179e","#7209b7","#560bad","#480ca8","#3f37c9","#4361ee","#4895ef","#4cc9f0","#06d6a0","#ffd166","#ef476f","#ffd60a","#80ed99","#64dfdf","#72efdd","#56cfe1","#4ea8de","#a0c4ff"];
 
-// ダーツが刺さる半径（盤面中心からの距離）
-const dartRadius = r*0.55;
-// 盤に刺さっているダーツ（刺さった瞬間のセグメント角度を保持し、回転と一緒に動く）
-let stuckDart = null; // {localAngle}
+// 盤に刺さっているダーツ（刺さった瞬間のセグメント角度・半径を保持し、回転と一緒に動く）
+let stuckDart = null; // {localAngle, radius}
 
 function pointAtAngle(a, radius){
   return { x: center.x + radius*Math.cos(a), y: center.y + radius*Math.sin(a) };
@@ -196,8 +194,9 @@ function drawWheel(){
   // 盤に刺さったダーツ（先端は盤に埋まって見えないように、軸の一部と尾翼だけを描く。回転と一緒に動く）
   if(stuckDart){
     const a = stuckDart.localAngle + angle;
+    const rad = stuckDart.radius;
     ctx.save();
-    ctx.translate(dartRadius*Math.cos(a), dartRadius*Math.sin(a));
+    ctx.translate(rad*Math.cos(a), rad*Math.sin(a));
     ctx.rotate(a + Math.PI);
     drawStuckDartShape();
     ctx.restore();
@@ -348,7 +347,7 @@ function getIndexAtPointer(n, wheelAngle){
   const aa = (a + 2*Math.PI) % (2*Math.PI);
   return Math.min(n-1, Math.max(0, Math.floor(aa / (2*Math.PI/n))));
 }
-const bgm = new Audio("./tin-can-carnival.mp3?v=20260814-041");
+const bgm = new Audio("./tin-can-carnival.mp3?v=20260816-042");
 let bgmObjectUrl = null;
 bgm.loop = true;
 bgm.volume = 0.45;
@@ -496,7 +495,7 @@ function thwack(){
 function playWinnerBgm(){
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if(isIOS){ winJingle(); return; }
-  const winAudio = new Audio("./brass-verdict.mp3?v=20260814-041");
+  const winAudio = new Audio("./brass-verdict.mp3?v=20260816-042");
   currentWinnerAudio = winAudio;
   winAudio.volume = 0.9;
   setTimeout(()=>{
@@ -604,9 +603,10 @@ throwDartBtn.addEventListener("click", ()=>{
   const throwStartTime = performance.now();
   const velocity = FREE_SPIN_VELOCITY;
 
-  // ダーツの飛行時間後に盤がどの角度にあるかを予測し、その位置（固定の照準点）めがけて投げる
-  const predictedAngle = throwStartAngle + velocity * DART_FLIGHT_MS;
-  const target = pointAtAngle(-Math.PI/2, dartRadius);
+  // ダーツの飛行時間後に盤がどの角度にあるかを予測し、その位置めがけて投げる。
+  // 刺さる半径は中心近く〜外周近くまで毎回ランダムに変える
+  const stuckRadius = r*0.15 + rng() * (r*0.85 - r*0.15);
+  const target = pointAtAngle(-Math.PI/2, stuckRadius);
   const origin = {x:size*0.93, y:size*0.97};
   const dx = target.x - origin.x, dy = target.y - origin.y;
   const ctrl = {x: origin.x + dx*0.55, y: Math.min(origin.y, target.y) - size*0.14};
@@ -624,11 +624,19 @@ throwDartBtn.addEventListener("click", ()=>{
       angle = throwStartAngle + velocity * totalElapsed;
     }else if(!decel){
       // 命中！刺さった瞬間の実際の角度で当選セグメントを確定する（見た目と当選結果を必ず一致させるため）
-      stopIndex = getIndexAtPointer(n, angle);
+      const step = freeSpin.step;
+      const rawA = (-Math.PI/2 - angle) % (2*Math.PI);
+      const aa = (rawA + 2*Math.PI) % (2*Math.PI);
+      stopIndex = Math.min(n-1, Math.max(0, Math.floor(aa / step)));
+      // 境界線ぎりぎりに刺さってどちらのセグメントか分からなくならないよう、
+      // セグメント内で境界から一定の余白を空けた位置に補正する
+      const within = aa - stopIndex*step;
+      const margin = step*0.18;
+      const clampedWithin = Math.min(step - margin, Math.max(margin, within));
       const duration = 2600 + rng()*1400;
       const range = velocity * duration / 5; // イージング開始時の速度が現在の回転速度と滑らかにつながるよう調整
       decel = { startAngle: angle, startTime: t, duration, endAngle: angle + range };
-      stuckDart = { localAngle: -Math.PI/2 - angle };
+      stuckDart = { localAngle: stopIndex*step + clampedWithin, radius: stuckRadius };
       thwack();
       leftCard.classList.add("shake");
       setTimeout(()=>leftCard.classList.remove("shake"), 300);
