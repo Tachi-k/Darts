@@ -553,7 +553,6 @@ throwDartBtn.addEventListener("click", ()=>{
 
   // ダーツの飛行時間後に盤がどの角度にあるかを予測し、その位置（固定の照準点）めがけて投げる
   const predictedAngle = throwStartAngle + velocity * DART_FLIGHT_MS;
-  const stopIndex = getIndexAtPointer(n, predictedAngle);
   const target = pointAtAngle(-Math.PI/2, dartRadius);
   const origin = {x:size*0.93, y:size*0.97};
   const dx = target.x - origin.x, dy = target.y - origin.y;
@@ -561,6 +560,7 @@ throwDartBtn.addEventListener("click", ()=>{
   const dartFlight = { origin, ctrl, target, lastRot: Math.atan2(dy,dx) };
 
   let decel = null; // {startAngle, startTime, duration, endAngle}
+  let stopIndex = 0;
   let lastIdx = getIndexAtPointer(n);
 
   function frame(t){
@@ -570,7 +570,8 @@ throwDartBtn.addEventListener("click", ()=>{
       // 盤は投げている間も止めずに回り続ける
       angle = throwStartAngle + velocity * totalElapsed;
     }else if(!decel){
-      // 命中！ここから減速して自然に停止する（真上に限らず毎回ランダムな向きで止まる）
+      // 命中！刺さった瞬間の実際の角度で当選セグメントを確定する（見た目と当選結果を必ず一致させるため）
+      stopIndex = getIndexAtPointer(n, angle);
       const duration = 2600 + rng()*1400;
       const range = velocity * duration / 5; // イージング開始時の速度が現在の回転速度と滑らかにつながるよう調整
       decel = { startAngle: angle, startTime: t, duration, endAngle: angle + range };
