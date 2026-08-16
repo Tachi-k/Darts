@@ -101,9 +101,6 @@
   </div>
 </div>
 
-<canvas id="confetti" style="position:fixed;left:0;top:0;pointer-events:none;z-index:10001;width:100vw;height:100vh;max-width:none"></canvas>
-<div class="toast" id="toast"></div>
-
 <script>
 const namesEl = document.getElementById("names");
 const winnersEl = document.getElementById("winners");
@@ -196,16 +193,69 @@ function drawWheel(){
   ctx.beginPath(); ctx.fillStyle="#111426"; ctx.arc(0,0,26,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.fillStyle="#ffd166"; ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.strokeStyle="#00000066"; ctx.lineWidth=2; ctx.arc(0,0,26,0,Math.PI*2); ctx.stroke();
-  // 盤に刺さったダーツ（回転と一緒に動く）
+  // 盤に刺さったダーツ（先端は盤に埋まって見えないように、軸の一部と尾翼だけを描く。回転と一緒に動く）
   if(stuckDart){
     const a = stuckDart.localAngle + angle;
     ctx.save();
     ctx.translate(dartRadius*Math.cos(a), dartRadius*Math.sin(a));
     ctx.rotate(a + Math.PI);
-    drawDartShape();
+    drawStuckDartShape();
     ctx.restore();
   }
   ctx.restore();
+}
+
+function drawStuckDartShape(){
+  // 刺さった状態：先端とバレルは盤の中に埋まって見えないように隠し、
+  // 飛び出している軸の一部と尾翼だけを描いて「刺さっている」立体感を出す
+  // （+x方向＝盤の奥＝先端が刺さっている方向。原点(0,0)が刺さった位置）
+
+  // 奥行きを出すための影（尾翼の下に少しずらして敷く）
+  ctx.save();
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.ellipse(-32, 5, 24, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // 刺さった穴（板に食い込んでいる部分の影）
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 5, 3, 0, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(0,0,0,.6)";
+  ctx.fill();
+
+  // 盤から飛び出している軸（短め。先端側は盤の中に隠れているので描かない）
+  const shaftGrad = ctx.createLinearGradient(-24,0,-4,0);
+  shaftGrad.addColorStop(0,"#4d5170");
+  shaftGrad.addColorStop(0.5,"#9aa0bd");
+  shaftGrad.addColorStop(1,"#eef0fb");
+  ctx.fillStyle = shaftGrad;
+  ctx.fillRect(-24,-2.5,20,5);
+  ctx.strokeStyle = "rgba(20,20,35,.45)"; ctx.lineWidth = 1;
+  for(let x=-21;x<=-7;x+=3.5){ ctx.beginPath(); ctx.moveTo(x,-2.5); ctx.lineTo(x,2.5); ctx.stroke(); }
+
+  // 尾翼（3枚を少しずつずらして立体的に見せる）
+  const flightColors = ["#c81c47", "#ff4d6d", "#ff9fb4"];
+  for(let i=0;i<3;i++){
+    const off = (i-1)*4.5;
+    ctx.save();
+    ctx.translate(0, off);
+    ctx.beginPath();
+    ctx.moveTo(-52, 0);
+    ctx.quadraticCurveTo(-42, -16 - i, -22, -3);
+    ctx.lineTo(-30, 0);
+    ctx.quadraticCurveTo(-42, 16 + i, -52, 0);
+    ctx.closePath();
+    ctx.globalAlpha = i === 1 ? 1 : 0.8;
+    ctx.fillStyle = flightColors[i];
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(255,255,255,.5)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-50,0); ctx.lineTo(-24,0); ctx.stroke();
 }
 
 function drawDartShape(){
