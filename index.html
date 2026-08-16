@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ダーツ</title>
+<style>
+  :root{--bg:#0f1220;--panel:#181d2f;--accent:#ffd166}
+  html,body{margin:0;padding:0;background:radial-gradient(1200px 800px at 50% -20%,#1f2550 0%,var(--bg) 60%);color:#e9ecff;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+  header{padding:14px;text-align:center;font-weight:800;letter-spacing:.02em}
+  .version{font-size:12px;color:#ffd166;font-weight:700;opacity:1}
+  .app{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:1fr 420px;gap:18px}
+  @media (max-width:980px){.app{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,#202743,#151a2e);border:1px solid #2a3155;border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .left{display:flex;align-items:center;justify-content:center;position:relative}
+  canvas{width:100%;height:auto;max-width:700px}
+  textarea{width:100%;min-height:180px;border-radius:8px;border:1px solid #313a66;background:#0f1330;color:#e9ecff;padding:10px;resize:vertical;font-size:14px;box-sizing:border-box}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:800;background:linear-gradient(180deg,#5b7cff,#3b58ff);color:white;box-shadow:0 8px 18px rgba(59,88,255,.35)}
+  .btn.secondary{background:#2f375f;box-shadow:none}
+  .btn.danger{background:linear-gradient(180deg,#ef476f,#b61f43)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .small{padding:8px 10px;font-size:13px}
+  .hint{font-size:12px;opacity:.85}
+  ul.winners{list-style:none;padding:6px;margin:6px 0;border-radius:6px;background:#0c1124;border:1px solid #22283f}
+  ul.winners li{padding:6px 8px;border-bottom:1px dashed #1c2238;display:flex;justify-content:space-between;gap:8px}
+  .counter{font-weight:800}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#222a55;border:1px solid #2c3670;font-size:12px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#101633;color:#fff;padding:10px 14px;border-radius:8px;border:1px solid #2a3155;display:none;z-index:20000}
+  .spinInput{width:88px;padding:7px 10px;border-radius:10px;border:1px solid #313a66;background:#0f1330;color:#e9ecff;font-weight:900;outline:none}
+  .spinInput:disabled{opacity:.55}
+  #winnerOverlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:10000;background:radial-gradient(1200px 800px at 50% 35%,rgba(255,233,150,.97) 0%,rgba(255,199,80,.96) 28%,rgba(180,120,20,.93) 62%,rgba(35,25,5,.93) 100%),linear-gradient(180deg,rgba(255,214,102,.35),rgba(0,0,0,.65));backdrop-filter:blur(2px)}
+  .winnerBox{text-align:center;padding:40px 28px;border-radius:22px;border:1px solid rgba(255,233,150,.55);box-shadow:0 20px 70px rgba(0,0,0,.45);background:linear-gradient(180deg,rgba(20,22,40,.82),rgba(10,10,18,.78));animation:zoomIn .38s ease;max-width:min(900px,92vw)}
+  .winnerLabel{font-size:34px;font-weight:900;letter-spacing:.06em;margin-bottom:22px;opacity:.95}
+  #winnerNameFull{font-size:clamp(44px,7.5vw,92px);font-weight:1000;color:#ffd166;text-shadow:0 10px 30px rgba(255,209,102,.65);margin-bottom:30px;line-height:1.15;word-break:break-word}
+  #winnerOverlay button{font-size:20px;padding:12px 34px;border-radius:14px;border:none;font-weight:900;cursor:pointer;background:linear-gradient(180deg,#5b7cff,#3b58ff);color:#fff}
+  @keyframes zoomIn{from{transform:scale(.72);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes dartShake{0%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-2px)}100%{transform:translate(0,0)}}
+  .shake{animation:dartShake .28s ease}
+  #errorOverlay{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,0,.88);border:3px solid gold;border-radius:18px;color:gold;font-weight:900;font-size:clamp(16px,3.2vw,30px);padding:22px 40px;text-align:center;z-index:200;pointer-events:none;white-space:nowrap;box-shadow:0 0 30px rgba(255,215,0,.55),0 8px 40px rgba(0,0,0,.7);animation:errorBlink .55s ease-in-out infinite alternate}
+  @keyframes errorBlink{from{opacity:1;box-shadow:0 0 32px rgba(255,215,0,.85),0 8px 40px rgba(0,0,0,.7);text-shadow:0 0 12px rgba(255,215,0,.9)}to{opacity:.3;box-shadow:0 0 6px rgba(255,215,0,.2),0 8px 40px rgba(0,0,0,.7);text-shadow:none}}
+</style>
+</head>
+<body>
+<header>ダーツ<br><span class="version">Software Version 20260814-041</span></header>
+
+<div class="app">
+  <div class="card left">
+    <canvas id="wheel" width="920" height="920"></canvas>
+    <div id="errorOverlay">⚠️ 2名以上入力してください</div>
+  </div>
+
+  <div class="card right">
+    <div style="display:grid;gap:10px">
+      <textarea id="names" placeholder="ここに名前を入力（改行で区切る／最大45名）&#10;または テキストファイル読込ボタンから追加"></textarea>
+
+      <div class="row">
+        <button class="btn" id="startSpin" type="button">回転開始</button>
+        <button class="btn" id="throwDartBtn" type="button" disabled>ダーツ投げる！</button>
+        <button class="btn secondary" id="shuffle" type="button">シャッフル</button>
+        <button class="btn danger" id="clearRoster" type="button">名簿を全消去</button>
+      </div>
+
+      <div class="row" style="align-items:flex-end">
+        <div class="hint">参加：<span class="counter" id="count">0</span> 名（最大45）</div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label class="btn small" for="nameFile" id="nameFileLabel" style="cursor:pointer">テキストファイル読込</label>
+          <input id="nameFile" type="file" accept=".txt,text/plain" style="display:none" />
+          <label class="btn secondary small" for="bgmFile" id="bgmFileLabel" style="cursor:pointer">BGM変更</label>
+          <input id="bgmFile" type="file" accept="audio/*" style="display:none" />
+          <div class="hint" id="bgmName" style="width:100%;margin-top:4px">BGM：tin-can-carnival.mp3</div>
+        </div>
+      </div>
+
+      <button class="btn secondary small" id="confirmRemove" type="button" style="display:none">命中者を名簿から除外（確定）</button>
+
+      <div class="row" style="align-items:flex-end">
+        <div style="flex:1">
+          <strong>命中者リスト</strong>
+          <ul class="winners" id="winners"></ul>
+        </div>
+        <div>
+          <button class="btn secondary small" id="copyWinners" type="button">命中者をコピー</button>
+          <button class="btn secondary small" id="clearWinners" type="button">履歴を全消去</button>
+        </div>
+      </div>
+
+      <div class="hint" id="status">状態：2名以上入力してください（iPhoneは消音スイッチOFF・音量UPで）</div>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti" style="position:fixed;left:0;top:0;pointer-events:none;z-index:10001;width:100vw;height:100vh;max-width:none"></canvas>
+<div class="toast" id="toast"></div>
+
+<div id="winnerOverlay" aria-hidden="true">
+  <div class="winnerBox" role="dialog" aria-modal="true">
+    <div class="winnerLabel">🎯 命中 🎯</div>
+    <div id="winnerNameFull"></div>
+    <button id="closeWinner" type="button">OK</button>
+  </div>
+</div>
+
+<script>
+const namesEl = document.getElementById("names");
+const winnersEl = document.getElementById("winners");
+const countEl = document.getElementById("count");
+const statusEl = document.getElementById("status");
+const toastEl = document.getElementById("toast");
+const confirmBtn = document.getElementById("confirmRemove");
+const startSpinBtn = document.getElementById("startSpin");
+const throwDartBtn = document.getElementById("throwDartBtn");
+const errorOverlay = document.getElementById("errorOverlay");
+const winnerOverlay = document.getElementById("winnerOverlay");
+const winnerNameFull = document.getElementById("winnerNameFull");
+const closeWinner = document.getElementById("closeWinner");
+const bgmFileInput = document.getElementById("bgmFile");
+const bgmFileLabel = document.getElementById("bgmFileLabel");
+const nameFileInput = document.getElementById("nameFile");
+const nameFileLabel = document.getElementById("nameFileLabel");
+const leftCard = document.querySelector(".card.left");
+
+let rafId = null;
+let errorHideTimer = null;
+let angle = -Math.PI/2;
+let phase = "idle"; // "idle" | "spinning" | "throwing"
+let lastWinnerName = null;
+
+function showToast(msg){ toastEl.textContent = msg; toastEl.style.display = "block"; setTimeout(()=>toastEl.style.display="none",2000); }
+function rng(){ if(window.crypto && crypto.getRandomValues){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]/2**32 } return Math.random(); }
+function clamp(n,min,max){ return Math.min(max, Math.max(min, n)); }
+function showErrorOverlay(){ errorOverlay.style.display = "block"; if(errorHideTimer) clearTimeout(errorHideTimer); errorHideTimer = setTimeout(()=>{ errorOverlay.style.display = "none"; errorHideTimer = null; }, 2000); }
+function hideErrorOverlay(){ errorOverlay.style.display = "none"; if(errorHideTimer){ clearTimeout(errorHideTimer); errorHideTimer = null; } }
+
+function dedupeAndNormalize(arr){
+  const seen = new Set(), out=[];
+  for(const s of arr){
+    const t = s.trim(); if(!t) continue;
+    const key = t.replace(/\s+/g,' ');
+    if(!seen.has(key)){ seen.add(key); out.push(key); }
+    if(out.length>=45) break;
+  }
+  return out;
+}
+function parseTextToList(text){ return dedupeAndNormalize(text.split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean)); }
+function expandList(arr){
+  const n = arr.length;
+  if(n === 2) return [...arr, ...arr, ...arr];
+  if(n === 3) return [...arr, ...arr];
+  if(n === 4) return [...arr, ...arr];
+  return arr;
+}
+function updateUIFromTextarea(){
+  const arr = parseTextToList(namesEl.value);
+  countEl.textContent = arr.length;
+  if(arr.length < 2){ statusEl.textContent = "状態：2名以上入力してください"; }
+  else { statusEl.textContent = "状態：準備OK"; hideErrorOverlay(); }
+}
+
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const size = canvas.width, r = size/2, center = {x:r,y:r};
+const COLORS = ["#ff4d6d","#f72585","#b5179e","#7209b7","#560bad","#480ca8","#3f37c9","#4361ee","#4895ef","#4cc9f0","#06d6a0","#ffd166","#ef476f","#ffd60a","#80ed99","#64dfdf","#72efdd","#56cfe1","#4ea8de","#a0c4ff"];
+
+// ダーツが刺さる半径（盤面中心からの距離）
+const dartRadius = r*0.55;
+// 盤に刺さっているダーツ（刺さった瞬間のセグメント角度を保持し、回転と一緒に動く）
+let stuckDart = null; // {localAngle}
+
+function pointAtAngle(a, radius){
+  return { x: center.x + radius*Math.cos(a), y: center.y + radius*Math.sin(a) };
+}
+
+function drawWheel(){
+  ctx.clearRect(0,0,size,size);
+  ctx.save(); ctx.translate(center.x,center.y);
+  const base = parseTextToList(namesEl.value);
+  const arr = expandList(base);
+  const n = Math.max(1, arr.length);
+  const step = 2*Math.PI/n;
+  const colorMap = {};
+  base.forEach((name, i)=>{ colorMap[name] = COLORS[i % COLORS.length]; });
+  for(let i=0;i<n;i++){
+    const a0 = i*step + angle, a1 = a0 + step;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r-10,a0,a1,false);
+    ctx.fillStyle = colorMap[arr[i]] || COLORS[i%COLORS.length]; ctx.fill();
+    ctx.strokeStyle="#00000055"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r-10,a0,a1,false); ctx.lineTo(0,0); ctx.stroke();
+    ctx.save(); ctx.fillStyle="#e9ecff"; ctx.rotate(a0 + step/2); ctx.textAlign="right"; ctx.font = "bold " + Math.max(10, Math.min(34, 820/n)) + "px system-ui"; ctx.fillText(arr[i]||"—", r-28, 8); ctx.restore();
+  }
+  // ダーツボード風の縁とブルズアイ
+  ctx.lineWidth=16; ctx.strokeStyle="#5a3a22"; ctx.beginPath(); ctx.arc(0,0,r-8,0,Math.PI*2); ctx.stroke();
+  ctx.lineWidth=4; ctx.strokeStyle="#3c2414"; ctx.beginPath(); ctx.arc(0,0,r-16,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.fillStyle="#111426"; ctx.arc(0,0,26,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.fillStyle="#ffd166"; ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.strokeStyle="#00000066"; ctx.lineWidth=2; ctx.arc(0,0,26,0,Math.PI*2); ctx.stroke();
+  // 盤に刺さったダーツ（回転と一緒に動く）
+  if(stuckDart){
+    const a = stuckDart.localAngle + angle;
+    ctx.save();
+    ctx.translate(dartRadius*Math.cos(a), dartRadius*Math.sin(a));
+    ctx.rotate(a + Math.PI);
+    drawDartShape();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawDartShape(){
+  // ダーツの形（+x方向＝先端を向いた状態で描画。呼び出し側で位置と向きを設定しておく）
+  // 全長を約2倍に伸ばす（太さは変えない）
+  ctx.save();
+  ctx.scale(2, 1);
+
+  // ---- 尾翼（フライト）：3枚を少しずつずらして立体的に見せる ----
+  const flightColors = ["#c81c47", "#ff4d6d", "#ff9fb4"];
+  for(let i=0;i<3;i++){
+    const off = (i-1)*4.5;
+    ctx.save();
+    ctx.translate(0, off);
+    ctx.beginPath();
+    ctx.moveTo(-52, 0);
+    ctx.quadraticCurveTo(-42, -16 - i, -22, -3);
+    ctx.lineTo(-30, 0);
+    ctx.quadraticCurveTo(-42, 16 + i, -52, 0);
+    ctx.closePath();
+    ctx.globalAlpha = i === 1 ? 1 : 0.8;
+    ctx.fillStyle = flightColors[i];
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(255,255,255,.5)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-50,0); ctx.lineTo(-24,0); ctx.stroke();
+
+  // ---- シャフト（金属の軸） ----
+  const shaftGrad = ctx.createLinearGradient(0,-2.5,0,2.5);
+  shaftGrad.addColorStop(0,"#eef0fb");
+  shaftGrad.addColorStop(0.5,"#8b91ad");
+  shaftGrad.addColorStop(1,"#4d5170");
+  ctx.fillStyle = shaftGrad;
+  ctx.fillRect(-24,-2.5,20,5);
+  ctx.strokeStyle = "rgba(20,20,35,.45)"; ctx.lineWidth = 1;
+  for(let x=-21;x<=-7;x+=3.5){ ctx.beginPath(); ctx.moveTo(x,-2.5); ctx.lineTo(x,2.5); ctx.stroke(); }
+
+  // ---- バレル（重心となる紡錘形の金属パーツ） ----
+  const barrelGrad = ctx.createLinearGradient(0,-8,0,8);
+  barrelGrad.addColorStop(0,"#fff6d8");
+  barrelGrad.addColorStop(0.35,"#ffd166");
+  barrelGrad.addColorStop(0.6,"#d69a2e");
+  barrelGrad.addColorStop(1,"#7a5510");
+  ctx.beginPath();
+  ctx.moveTo(-5,-3.2);
+  ctx.quadraticCurveTo(6,-9,17,-3.8);
+  ctx.quadraticCurveTo(21,0,17,3.8);
+  ctx.quadraticCurveTo(6,9,-5,3.2);
+  ctx.closePath();
+  ctx.fillStyle = barrelGrad;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 0.75; ctx.stroke();
+  ctx.strokeStyle = "rgba(90,60,10,.55)"; ctx.lineWidth = 1;
+  for(let x=1;x<=14;x+=3){ ctx.beginPath(); ctx.moveTo(x,-6.5); ctx.lineTo(x,6.5); ctx.stroke(); }
+  ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-3,-5.5); ctx.quadraticCurveTo(6,-8,15,-4); ctx.stroke();
+
+  // ---- ポイント（先端） ----
+  const tipGrad = ctx.createLinearGradient(17,0,42,0);
+  tipGrad.addColorStop(0,"#dfe2f0");
+  tipGrad.addColorStop(1,"#3d4258");
+  ctx.beginPath();
+  ctx.moveTo(17,-3.8);
+  ctx.lineTo(42,0);
+  ctx.lineTo(17,3.8);
+  ctx.closePath();
+  ctx.fillStyle = tipGrad;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.6)"; ctx.lineWidth = 0.75;
+  ctx.beginPath(); ctx.moveTo(19,-1.2); ctx.lineTo(38,0); ctx.stroke();
+
+  ctx.restore();
+}
+function drawDartAt(x,y,rotation){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(rotation);
+  drawDartShape();
+  ctx.restore();
+}
+
+function easeOutQuint(t){ return 1 - Math.pow(1 - t, 5); }
+function easeOutSoft(t){ return 1 - Math.pow(1 - t, 2.2); }
+function getIndexAtPointer(n, wheelAngle){
+  const wa = (wheelAngle === undefined) ? angle : wheelAngle;
+  const a = (-Math.PI/2 - wa) % (2*Math.PI);
+  const aa = (a + 2*Math.PI) % (2*Math.PI);
+  return Math.min(n-1, Math.max(0, Math.floor(aa / (2*Math.PI/n))));
+}
+const bgm = new Audio("./tin-can-carnival.mp3?v=20260814-041");
+let bgmObjectUrl = null;
+bgm.loop = true;
+bgm.volume = 0.45;
+bgm.preload = "auto";
+bgm.load();
+
+let currentWinnerAudio = null;
+
+bgmFileInput.addEventListener("change", (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(bgmObjectUrl){ URL.revokeObjectURL(bgmObjectUrl); bgmObjectUrl = null; }
+  bgmObjectUrl = URL.createObjectURL(file);
+  bgm.pause();
+  bgm.src = bgmObjectUrl;
+  bgm.loop = true;
+  bgm.volume = 0.45;
+  bgm.load();
+  document.getElementById("bgmName").textContent = `BGM：${file.name}`;
+  showToast(`抽選中BGMを「${file.name}」に変更しました`);
+});
+
+function loadNameTextFile(file){
+  if(!file){ showToast("ファイルが選択されていません"); return; }
+  if(!file.name.match(/\.txt$/i) && !file.type.startsWith("text/")){
+    showToast("テキストファイル（.txt）を選んでください");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const text = String(reader.result || "");
+    const added = parseTextToList(text.replace(/,/g,"\n"));
+    if(added.length === 0){ showToast("読み込める名前がありませんでした"); return; }
+    const merged = dedupeAndNormalize([...added]);
+    namesEl.value = merged.join("\n");
+    updateUIFromTextarea();
+    drawWheel();
+    showToast(`${merged.length}件読み込みました`);
+  };
+  reader.onerror = ()=>{ showToast("ファイルを読み込めませんでした"); };
+  reader.readAsText(file, "utf-8");
+}
+nameFileInput.addEventListener("change", (e)=>{
+  const file = e.target.files && e.target.files[0];
+  loadNameTextFile(file);
+  e.target.value = "";
+});
+
+function startBgm(){
+  bgm.pause();
+  bgm.currentTime = 0;
+  bgm.play().catch(err=>{
+    console.log("BGM再生失敗", err);
+    showToast("BGMを再生できませんでした。もう一度押してください");
+  });
+}
+function stopBgm(){ bgm.pause(); bgm.currentTime = 0; }
+function stopAllMusic(){
+  stopBgm();
+  if(currentWinnerAudio){
+    currentWinnerAudio.pause();
+    currentWinnerAudio.currentTime = 0;
+    currentWinnerAudio = null;
+  }
+}
+
+let audioCtx = null, masterGain = null;
+async function ensureAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 1.0;
+    masterGain.connect(audioCtx.destination);
+  }
+  if(audioCtx.state === "suspended"){ try{ await audioCtx.resume(); }catch(_){} }
+}
+function beep(freq=1100, dur=0.06, vol=0.18){
+  if(!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type="square"; o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(vol,t0);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g); g.connect(masterGain);
+  o.start(t0); o.stop(t0+dur);
+  o.onended = ()=>{ try{o.disconnect(); g.disconnect();}catch(_){} };
+}
+function errorBeep(){
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  [[220,0],[170,0.10],[140,0.20]].forEach(([freq, delay])=>{
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(freq, now + delay);
+    g.gain.setValueAtTime(0.001, now + delay);
+    g.gain.linearRampToValueAtTime(0.22, now + delay + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.13);
+    o.connect(g); g.connect(masterGain);
+    o.start(now + delay); o.stop(now + delay + 0.18);
+    o.onended = ()=>{ try{o.disconnect(); g.disconnect();}catch(_){} };
+  });
+}
+function winJingle(){
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const notes = [523.25,659.25,783.99,1046.5];
+  notes.forEach((f,i)=>{
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(f, now + i*0.12);
+    g.gain.setValueAtTime(0.001, now + i*0.12);
+    g.gain.linearRampToValueAtTime(0.28, now + i*0.12 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + i*0.12 + 0.35);
+    o.connect(g); g.connect(masterGain);
+    o.start(now + i*0.12); o.stop(now + i*0.12 + 0.35);
+    o.onended = ()=>{ try{o.disconnect(); g.disconnect();}catch(_){} };
+  });
+}
+function thwack(){
+  if(!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const bufferSize = Math.floor(audioCtx.sampleRate * 0.08);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * Math.pow(1-i/bufferSize,2); }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "lowpass"; filter.frequency.setValueAtTime(1200,t0);
+  const ng = audioCtx.createGain();
+  ng.gain.setValueAtTime(0.5,t0);
+  ng.gain.exponentialRampToValueAtTime(0.001,t0+0.08);
+  noise.connect(filter); filter.connect(ng); ng.connect(masterGain);
+  noise.start(t0); noise.stop(t0+0.09);
+  const o = audioCtx.createOscillator();
+  const og = audioCtx.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(90,t0);
+  o.frequency.exponentialRampToValueAtTime(40,t0+0.12);
+  og.gain.setValueAtTime(0.4,t0);
+  og.gain.exponentialRampToValueAtTime(0.001,t0+0.12);
+  o.connect(og); og.connect(masterGain);
+  o.start(t0); o.stop(t0+0.12);
+}
+function playWinnerBgm(){
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if(isIOS){ winJingle(); return; }
+  const winAudio = new Audio("./brass-verdict.mp3?v=20260814-041");
+  currentWinnerAudio = winAudio;
+  winAudio.volume = 0.9;
+  setTimeout(()=>{
+    winAudio.play().catch(()=>{ winJingle(); });
+  },150);
+}
+
+function openWinnerOverlay(name){
+  winnerNameFull.textContent = name;
+  winnerOverlay.style.display = "flex";
+  winnerOverlay.setAttribute("aria-hidden", "false");
+}
+function closeWinnerOverlay(){
+  winnerOverlay.style.display = "none";
+  winnerOverlay.setAttribute("aria-hidden", "true");
+}
+closeWinner.addEventListener("click", ()=>{ stopAllMusic(); closeWinnerOverlay(); });
+winnerOverlay.addEventListener("click", (e)=>{ if(e.target === winnerOverlay){ stopAllMusic(); closeWinnerOverlay(); } });
+window.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ stopAllMusic(); closeWinnerOverlay(); } });
+
+function setControlsDisabled(disabled){
+  namesEl.disabled = disabled;
+  document.getElementById("shuffle").disabled = disabled;
+  document.getElementById("clearRoster").disabled = disabled;
+  nameFileInput.disabled = disabled;
+  nameFileLabel.style.opacity = disabled ? ".5" : "1";
+  nameFileLabel.style.pointerEvents = disabled ? "none" : "auto";
+  bgmFileInput.disabled = disabled;
+  bgmFileLabel.style.opacity = disabled ? ".5" : "1";
+  bgmFileLabel.style.pointerEvents = disabled ? "none" : "auto";
+  document.getElementById("clearWinners").disabled = disabled;
+  document.getElementById("copyWinners").disabled = disabled;
+}
+
+// ダーツの二次ベジェ軌道上の座標を求める
+const DART_FLIGHT_MS = 350;
+const FREE_SPIN_VELOCITY = (Math.PI*2) / 320; // rad/ms（約3.1回転/秒の高速回転）
+function dartFlightPoint(f, t){
+  const it = 1-t;
+  return {
+    x: it*it*f.origin.x + 2*it*t*f.ctrl.x + t*t*f.target.x,
+    y: it*it*f.origin.y + 2*it*t*f.ctrl.y + t*t*f.target.y
+  };
+}
+
+let freeSpin = null; // {arr, n, step, lastIdx}
+
+function stopFreeSpinLoop(){
+  if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+}
+
+startSpinBtn.addEventListener("click", async ()=>{
+  if(phase !== "idle") return;
+
+  const base = parseTextToList(namesEl.value);
+  if(base.length < 2){
+    await ensureAudio();
+    errorBeep();
+    showErrorOverlay();
+    return;
+  }
+
+  phase = "spinning";
+  setControlsDisabled(true);
+  startSpinBtn.disabled = true;
+  throwDartBtn.disabled = false;
+  confirmBtn.style.display = "none";
+  statusEl.textContent = "回転中…（好きなタイミングで「ダーツ投げる！」を押してください）";
+  stuckDart = null;
+  stopFreeSpinLoop();
+
+  await ensureAudio();
+  startBgm();
+
+  const arr = expandList(base);
+  const n = arr.length;
+  const step = 2*Math.PI/n;
+  freeSpin = { arr, n, step };
+
+  let lastT = performance.now();
+  let lastIdx = getIndexAtPointer(n);
+  function freeFrame(t){
+    const dt = t - lastT; lastT = t;
+    angle += FREE_SPIN_VELOCITY * dt;
+    drawWheel();
+    const idx = getIndexAtPointer(n);
+    if(idx !== lastIdx){
+      beep(1500, 0.05, 0.14);
+      lastIdx = idx;
+    }
+    rafId = requestAnimationFrame(freeFrame);
+  }
+  rafId = requestAnimationFrame(freeFrame);
+});
+
+throwDartBtn.addEventListener("click", ()=>{
+  if(phase !== "spinning" || !freeSpin) return;
+  phase = "throwing";
+  throwDartBtn.disabled = true;
+
+  const { arr, n } = freeSpin;
+  stopFreeSpinLoop();
+
+  const throwStartAngle = angle;
+  const throwStartTime = performance.now();
+  const velocity = FREE_SPIN_VELOCITY;
+
+  // ダーツの飛行時間後に盤がどの角度にあるかを予測し、その位置（固定の照準点）めがけて投げる
+  const predictedAngle = throwStartAngle + velocity * DART_FLIGHT_MS;
+  const stopIndex = getIndexAtPointer(n, predictedAngle);
+  const target = pointAtAngle(-Math.PI/2, dartRadius);
+  const origin = {x:size*0.93, y:size*0.97};
+  const dx = target.x - origin.x, dy = target.y - origin.y;
+  const ctrl = {x: origin.x + dx*0.55, y: Math.min(origin.y, target.y) - size*0.14};
+  const dartFlight = { origin, ctrl, target, lastRot: Math.atan2(dy,dx) };
+
+  let decel = null; // {startAngle, startTime, duration, endAngle}
+  let lastIdx = getIndexAtPointer(n);
+
+  function frame(t){
+    const totalElapsed = t - throwStartTime;
+
+    if(totalElapsed <= DART_FLIGHT_MS){
+      // 盤は投げている間も止めずに回り続ける
+      angle = throwStartAngle + velocity * totalElapsed;
+    }else if(!decel){
+      // 命中！ここから減速して自然に停止する（真上に限らず毎回ランダムな向きで止まる）
+      const duration = 2600 + rng()*1400;
+      const range = velocity * duration / 5; // イージング開始時の速度が現在の回転速度と滑らかにつながるよう調整
+      decel = { startAngle: angle, startTime: t, duration, endAngle: angle + range };
+      stuckDart = { localAngle: -Math.PI/2 - angle };
+      thwack();
+      leftCard.classList.add("shake");
+      setTimeout(()=>leftCard.classList.remove("shake"), 300);
+    }
+
+    if(decel){
+      const kd = Math.min(1, (t - decel.startTime) / decel.duration);
+      angle = decel.startAngle + (decel.endAngle - decel.startAngle) * easeOutQuint(kd);
+    }
+
+    drawWheel();
+
+    if(totalElapsed <= DART_FLIGHT_MS){
+      const kf = Math.min(1, totalElapsed / DART_FLIGHT_MS);
+      const ef = easeOutQuint(kf);
+      const p = dartFlightPoint(dartFlight, ef);
+      const p2 = dartFlightPoint(dartFlight, Math.min(1, ef+0.02));
+      const rot = Math.atan2(p2.y-p.y, p2.x-p.x) || dartFlight.lastRot;
+      dartFlight.lastRot = rot;
+      drawDartAt(p.x, p.y, rot);
+      statusEl.textContent = "🎯 ダーツが飛んでいく…";
+    }else{
+      const idx = getIndexAtPointer(n);
+      if(idx !== lastIdx){
+        beep(1500, 0.05, 0.14);
+        lastIdx = idx;
+      }
+      statusEl.textContent = "回転中…（刺さったまま減速中）";
+    }
+
+    if(decel && (t - decel.startTime) >= decel.duration){
+      angle = ((angle % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+      drawWheel();
+      stopBgm();
+      statusEl.textContent = "🎯 停止！";
+
+      setTimeout(()=>{
+        phase = "idle";
+        setControlsDisabled(false);
+        startSpinBtn.disabled = false;
+        throwDartBtn.disabled = true;
+        playWinnerBgm();
+
+        const w = arr[stopIndex];
+        statusEl.textContent = `🎯 命中：${w}`;
+        addWinner(w);
+        openWinnerOverlay(w);
+        boomConfetti();
+        lastWinnerName = w;
+        confirmBtn.style.display = "inline-block";
+        confirmBtn.textContent = `命中者「${w}」を名簿から除外（確定）`;
+      }, 600);
+      return;
+    }
+
+    rafId = requestAnimationFrame(frame);
+  }
+
+  rafId = requestAnimationFrame(frame);
+});
+
+function addWinner(name){
+  const li = document.createElement("li");
+  const span = document.createElement("span"); span.textContent = name;
+  const del = document.createElement("button");
+  del.textContent = "削除"; del.className = "btn small danger"; del.type="button";
+  del.style.padding="6px 10px"; del.style.fontSize="12px";
+  del.addEventListener("click", ()=>{ winnersEl.removeChild(li); });
+  li.appendChild(span); li.appendChild(del);
+  winnersEl.appendChild(li);
+}
+
+document.getElementById("copyWinners").addEventListener("click", async ()=>{
+  const winners = [...winnersEl.querySelectorAll("li span")].map(el => el.textContent.trim()).filter(Boolean);
+  if(winners.length === 0){ showToast("コピーする命中者がいません"); return; }
+  const text = winners.join("\n");
+  try{ await navigator.clipboard.writeText(text); showToast("命中者をコピーしました"); }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    showToast("命中者をコピーしました");
+  }
+});
+
+document.getElementById("clearWinners").addEventListener("click", ()=>{ if(confirm("命中者リストをすべて消去しますか？")) winnersEl.innerHTML = ""; });
+confirmBtn.addEventListener("click", ()=>{
+  if(!lastWinnerName) return;
+  const arr = parseTextToList(namesEl.value);
+  const idx = arr.indexOf(lastWinnerName);
+  if(idx >= 0){
+    arr.splice(idx,1);
+    namesEl.value = arr.join("\n");
+    updateUIFromTextarea(); drawWheel();
+    showToast(`「${lastWinnerName}」を名簿から除外しました`);
+  }else{ showToast("名簿に命中者が見つかりませんでした"); }
+  lastWinnerName = null;
+  confirmBtn.style.display = "none";
+});
+document.getElementById("clearRoster").addEventListener("click", ()=>{
+  if(!namesEl.value.trim()){ showToast("名簿は既に空です"); return; }
+  if(confirm("名簿を完全に消去しますか？")){
+    namesEl.value = "";
+    updateUIFromTextarea(); drawWheel();
+    showToast("名簿を消去しました");
+    confirmBtn.style.display = "none";
+    lastWinnerName = null;
+  }
+});
+document.getElementById("shuffle").addEventListener("click", ()=>{
+  const arr = parseTextToList(namesEl.value);
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  namesEl.value = arr.join("\n");
+  updateUIFromTextarea(); drawWheel();
+  showToast("順番をシャッフルしました");
+});
+namesEl.addEventListener("input", ()=>{ updateUIFromTextarea(); drawWheel(); });
+
+const conf = document.getElementById("confetti");
+const cctx = conf.getContext("2d");
+function boomConfetti(){
+  const W = conf.width = innerWidth, H = conf.height = innerHeight;
+  const pieces=[]; const N=200;
+  for(let i=0;i<N;i++){
+    pieces.push({x:rng()*W,y:-rng()*H*0.3,vx:(rng()*2-1)*3,vy:2+rng()*4,g:0.05+rng()*0.05,w:6+rng()*8,h:10+rng()*14,rot:rng()*Math.PI*2,vr:(rng()*2-1)*0.15,color:COLORS[i%COLORS.length],life:0,max:220+Math.floor(rng()*100)});
+  }
+  let anim;
+  (function tick(){
+    cctx.clearRect(0,0,W,H);
+    for(const p of pieces){
+      p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life++;
+      if(p.x < 0) p.x = W; else if(p.x > W) p.x = 0;
+      cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.rot); cctx.fillStyle=p.color; cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); cctx.restore();
+    }
+    if(pieces.some(p=> p.life < p.max && p.y < H+40)) anim=requestAnimationFrame(tick);
+    else { cancelAnimationFrame(anim); cctx.clearRect(0,0,W,H); }
+  })();
+}
+
+addEventListener("resize", ()=>{ conf.width = innerWidth; conf.height = innerHeight; drawWheel(); });
+["touchstart","click","keydown","visibilitychange","focus"].forEach(ev=>{
+  window.addEventListener(ev, ()=>{ if(audioCtx && audioCtx.state==="suspended"){ audioCtx.resume().catch(()=>{}); } }, {passive:true});
+});
+
+namesEl.value = "";
+updateUIFromTextarea();
+drawWheel();
+</script>
+</body>
+</html>
