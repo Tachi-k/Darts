@@ -42,7 +42,7 @@
 </style>
 </head>
 <body>
-<header>ダーツ<br><span class="version">Software Version 20260816-042</span></header>
+<header>ダーツ<br><span class="version">Software Version 20260816-045</span></header>
 
 <div class="app">
   <div class="card left">
@@ -347,7 +347,7 @@ function getIndexAtPointer(n, wheelAngle){
   const aa = (a + 2*Math.PI) % (2*Math.PI);
   return Math.min(n-1, Math.max(0, Math.floor(aa / (2*Math.PI/n))));
 }
-const bgm = new Audio("./tin-can-carnival.mp3?v=20260816-042");
+const bgm = new Audio("./tin-can-carnival.mp3?v=20260816-045");
 let bgmObjectUrl = null;
 bgm.loop = true;
 bgm.volume = 0.45;
@@ -495,7 +495,7 @@ function thwack(){
 function playWinnerBgm(){
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if(isIOS){ winJingle(); return; }
-  const winAudio = new Audio("./brass-verdict.mp3?v=20260816-042");
+  const winAudio = new Audio("./brass-verdict.mp3?v=20260816-045");
   currentWinnerAudio = winAudio;
   winAudio.volume = 0.9;
   setTimeout(()=>{
@@ -531,7 +531,9 @@ function setControlsDisabled(disabled){
 }
 
 // ダーツの二次ベジェ軌道上の座標を求める
-const DART_FLIGHT_MS = 350;
+// 飛行時間は固定にせず毎回わずかにランダムにすることで、目押し（狙ったタイミングでの命中）を難しくする
+const DART_FLIGHT_MS_MIN = 300;
+const DART_FLIGHT_MS_MAX = 420;
 const FREE_SPIN_VELOCITY = (Math.PI*2) / 320; // rad/ms（約3.1回転/秒の高速回転）
 function dartFlightPoint(f, t){
   const it = 1-t;
@@ -602,11 +604,14 @@ throwDartBtn.addEventListener("click", ()=>{
   const throwStartAngle = angle;
   const throwStartTime = performance.now();
   const velocity = FREE_SPIN_VELOCITY;
+  // このダーツの飛行時間は毎回わずかにランダム（目押しでの命中を難しくするため、押した後にしか決まらない）
+  const flightMs = DART_FLIGHT_MS_MIN + rng() * (DART_FLIGHT_MS_MAX - DART_FLIGHT_MS_MIN);
 
   // ダーツの飛行時間後に盤がどの角度にあるかを予測し、その位置めがけて投げる。
-  // 刺さる半径は中心近く〜外周近くまで毎回ランダムに変える
+  // 刺さる半径は中心近く〜外周近くまで、狙う方向も中心より上か下かを毎回ランダムに変える
   const stuckRadius = r*0.15 + rng() * (r*0.85 - r*0.15);
-  const target = pointAtAngle(-Math.PI/2, stuckRadius);
+  const aimAngle = rng() * Math.PI * 2; // 上下左右を含む360度どの方向にも刺さるようにする
+  const target = pointAtAngle(aimAngle, stuckRadius);
   const origin = {x:size*0.93, y:size*0.97};
   const dx = target.x - origin.x, dy = target.y - origin.y;
   const ctrl = {x: origin.x + dx*0.55, y: Math.min(origin.y, target.y) - size*0.14};
@@ -619,13 +624,13 @@ throwDartBtn.addEventListener("click", ()=>{
   function frame(t){
     const totalElapsed = t - throwStartTime;
 
-    if(totalElapsed <= DART_FLIGHT_MS){
+    if(totalElapsed <= flightMs){
       // 盤は投げている間も止めずに回り続ける
       angle = throwStartAngle + velocity * totalElapsed;
     }else if(!decel){
       // 命中！刺さった瞬間の実際の角度で当選セグメントを確定する（見た目と当選結果を必ず一致させるため）
       const step = freeSpin.step;
-      const rawA = (-Math.PI/2 - angle) % (2*Math.PI);
+      const rawA = (aimAngle - angle) % (2*Math.PI);
       const aa = (rawA + 2*Math.PI) % (2*Math.PI);
       stopIndex = Math.min(n-1, Math.max(0, Math.floor(aa / step)));
       // 境界線ぎりぎりに刺さってどちらのセグメントか分からなくならないよう、
@@ -649,8 +654,8 @@ throwDartBtn.addEventListener("click", ()=>{
 
     drawWheel();
 
-    if(totalElapsed <= DART_FLIGHT_MS){
-      const kf = Math.min(1, totalElapsed / DART_FLIGHT_MS);
+    if(totalElapsed <= flightMs){
+      const kf = Math.min(1, totalElapsed / flightMs);
       const ef = easeOutQuint(kf);
       const p = dartFlightPoint(dartFlight, ef);
       const p2 = dartFlightPoint(dartFlight, Math.min(1, ef+0.02));
