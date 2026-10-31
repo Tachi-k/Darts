@@ -42,7 +42,7 @@
 </style>
 </head>
 <body>
-<header>ダーツ<br><span class="version">Software Version 20261031-046</span></header>
+<header>ダーツ<br><span class="version">Software Version 20261031-047</span></header>
 
 <div class="app">
   <div class="card left">
@@ -534,7 +534,7 @@ function setControlsDisabled(disabled){
 // 飛行時間は固定にせず毎回わずかにランダムにすることで、目押し（狙ったタイミングでの命中）を難しくする
 const DART_FLIGHT_MS_MIN = 300;
 const DART_FLIGHT_MS_MAX = 420;
-const FREE_SPIN_VELOCITY = (Math.PI*2) / 320; // rad/ms（約3.1回転/秒の高速回転）
+const FREE_SPIN_VELOCITY = (Math.PI*2) * 3 / 320; // rad/ms（約9.4回転/秒：従来の3倍）
 function dartFlightPoint(f, t){
   const it = 1-t;
   return {
