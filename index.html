@@ -39,10 +39,50 @@
   .shake{animation:dartShake .28s ease}
   #errorOverlay{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,0,.88);border:3px solid gold;border-radius:18px;color:gold;font-weight:900;font-size:clamp(16px,3.2vw,30px);padding:22px 40px;text-align:center;z-index:200;pointer-events:none;white-space:nowrap;box-shadow:0 0 30px rgba(255,215,0,.55),0 8px 40px rgba(0,0,0,.7);animation:errorBlink .55s ease-in-out infinite alternate}
   @keyframes errorBlink{from{opacity:1;box-shadow:0 0 32px rgba(255,215,0,.85),0 8px 40px rgba(0,0,0,.7);text-shadow:0 0 12px rgba(255,215,0,.9)}to{opacity:.3;box-shadow:0 0 6px rgba(255,215,0,.2),0 8px 40px rgba(0,0,0,.7);text-shadow:none}}
+/* Seasonal presentation: enabled only during the event by syncHalloweenTheme. */
+.halloween-banner,.halloween-scenery{display:none}
+html.halloween{--bg:#100a1b;--accent:#ffb65a;background:#100a1b}
+html.halloween body{background:radial-gradient(ellipse at 12% 5%,#66323e66,transparent 38%),radial-gradient(ellipse at 90% 10%,#703fc34d,transparent 40%),linear-gradient(160deg,#1c102b,#100a1b 70%);min-height:100vh;color:#fff1df}
+.halloween header{padding:24px 16px 10px;font-size:26px;color:#ffe3bb;letter-spacing:.12em;position:relative;z-index:1}
+.halloween header::before{content:'HALLOWEEN NIGHT';display:block;font-size:10px;letter-spacing:.38em;color:#ffae64;margin-bottom:9px}
+.halloween .version{font-size:11px;letter-spacing:.08em;color:#c4a6d8}
+.halloween .halloween-banner{display:block;text-align:center;color:#cdb6df;font-size:12px;line-height:1.9;margin:0 16px 12px;position:relative;z-index:1}
+.halloween-banner strong{color:#ffbf76;font-weight:600}
+.halloween .halloween-scenery{display:block;position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.halloween .halloween-scenery .moon{position:absolute;top:30px;right:7%;width:115px;height:115px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe7aa,#ffbe69);box-shadow:0 0 70px #ffa45130;opacity:.2}
+.halloween .halloween-scenery .bat{position:absolute;font-size:38px;filter:grayscale(1);opacity:.3;right:5%;top:152px;transform:rotate(-14deg)}
+.halloween .halloween-scenery .bat.second{right:17%;top:65px;font-size:24px;transform:rotate(12deg)}
+.halloween .halloween-scenery .web{position:absolute;left:-3px;top:-5px;width:170px;height:170px;background:repeating-radial-gradient(circle at 0 0,transparent 0 30px,#c6a2dd33 31px 32px,transparent 33px 35px);clip-path:polygon(0 0,100% 0,0 100%);opacity:.6}
+.halloween .halloween-scenery .web::after{content:'';position:absolute;inset:0;background:repeating-conic-gradient(from 90deg at 0 0,transparent 0deg 14deg,#c6a2dd55 14.5deg 15deg,transparent 15.5deg 30deg)}
+.halloween .app{position:relative;z-index:1}
+.halloween .card{background:linear-gradient(150deg,#30203ee8,#1a1128f2);border:1px solid #70425a;border-radius:20px;box-shadow:0 16px 50px #0005}
+.halloween .left{background:radial-gradient(circle,#50304944,transparent 65%),#1b1228;border-color:#75444c;padding:18px}
+.halloween #wheel{filter:drop-shadow(0 0 18px #fa8d2720)}
+.halloween textarea,.halloween .spinInput{background:#150d22;border-color:#65466f;color:#fff0df}
+.halloween textarea::placeholder{color:#b9a5c4;opacity:1}
+.halloween .btn{background:linear-gradient(180deg,#ffb15d,#ed8434);color:#26132c;box-shadow:0 6px 20px #ff902526}
+.halloween .btn.secondary{background:#493253;color:#ffe5cb;box-shadow:none}
+.halloween .btn.danger{background:#6e304e;color:#ffe8df;box-shadow:none}
+.halloween .tag{background:#442435;border-color:#87503c;color:#ffc88e}
+.halloween ul.winners{background:#150d22;border-color:#4b305c}
+.halloween ul.winners li{border-color:#50345c}
+.halloween .toast{background:#2c193d;border-color:#a36750;color:#ffe7c8}
+.halloween #winnerOverlay{background:radial-gradient(ellipse at 50% 35%,#7a3a22f2,#32103aef 60%,#100a1bf5)}
+.halloween .winnerBox{border-color:#f4a14d;background:linear-gradient(160deg,#35203cf5,#160e25f5);box-shadow:0 0 80px #ff982633}
+.halloween .winnerLabel{color:#ffd8a0}
+.halloween .winnerLabel::before{content:'🎃';display:block;font-size:56px;margin-bottom:18px}
+.halloween #winnerNameFull{color:#ffbd6d;text-shadow:0 0 30px #f58a3870}
+.halloween #winnerOverlay button{background:#ffad5a;color:#241128}
+@media(max-width:600px){.halloween header{font-size:22px;padding-top:20px}.halloween .halloween-scenery .web{width:105px;height:105px}.halloween .left{padding:10px}.halloween .halloween-banner{font-size:11px}}
 </style>
 </head>
 <body>
-<header>ダーツ<br><span class="version">Software Version 20261031-047</span></header>
+<header><span id="appTitle">ダーツ</span><br><span class="version">Software Version 20261031-048</span></header>
+<div class="halloween-scenery" aria-hidden="true"><span class="web"></span><span class="moon"></span><span class="bat">🦇</span><span class="bat second">🦇</span></div>
+<div class="halloween-banner"><strong>一週間だけの、ちょっと不思議な抽選会。</strong><br>10.31 — 11.06 ・ HALLOWEEN EDITION</div>
+
+
+
 
 <div class="app">
   <div class="card left">
@@ -102,6 +142,17 @@
 </div>
 
 <script>
+// Japan Standard Time: Oct 31 through Nov 6. BGM sources are independent of this theme.
+const HALLOWEEN_START = Date.parse("2026-10-31T00:00:00+09:00");
+const HALLOWEEN_END = Date.parse("2026-11-07T00:00:00+09:00");
+function isHalloweenDate(now = Date.now()){
+  return now >= HALLOWEEN_START && now < HALLOWEEN_END;
+}
+let halloweenActive = isHalloweenDate();
+document.documentElement.classList.toggle("halloween", halloweenActive);
+document.getElementById("appTitle").textContent = halloweenActive ? "かぼちゃのダーツ" : "ダーツ";
+
+
 const namesEl = document.getElementById("names");
 const winnersEl = document.getElementById("winners");
 const countEl = document.getElementById("count");
@@ -160,7 +211,7 @@ function updateUIFromTextarea(){
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const size = canvas.width, r = size/2, center = {x:r,y:r};
-const COLORS = ["#ff4d6d","#f72585","#b5179e","#7209b7","#560bad","#480ca8","#3f37c9","#4361ee","#4895ef","#4cc9f0","#06d6a0","#ffd166","#ef476f","#ffd60a","#80ed99","#64dfdf","#72efdd","#56cfe1","#4ea8de","#a0c4ff"];
+const NORMAL_COLORS = ["#ff4d6d","#f72585","#b5179e","#7209b7","#560bad","#480ca8","#3f37c9","#4361ee","#4895ef","#4cc9f0","#06d6a0","#ffd166","#ef476f","#ffd60a","#80ed99","#64dfdf","#72efdd","#56cfe1","#4ea8de","#a0c4ff"];
 
 // 盤に刺さっているダーツ（刺さった瞬間のセグメント角度・半径を保持し、回転と一緒に動く）
 let stuckDart = null; // {localAngle, radius}
@@ -168,6 +219,24 @@ let stuckDart = null; // {localAngle, radius}
 function pointAtAngle(a, radius){
   return { x: center.x + radius*Math.cos(a), y: center.y + radius*Math.sin(a) };
 }
+
+const HALLOWEEN_COLORS = ["#9c461d","#653487","#a34a22","#36305f","#704391","#3c6145","#92404c","#51366e","#804a25","#324e60"];
+let COLORS = halloweenActive ? HALLOWEEN_COLORS : NORMAL_COLORS;
+function syncHalloweenTheme(){
+  const active = isHalloweenDate();
+  if(active === halloweenActive) return;
+  halloweenActive = active;
+  COLORS = active ? HALLOWEEN_COLORS : NORMAL_COLORS;
+  document.documentElement.classList.toggle("halloween", active);
+  document.getElementById("appTitle").textContent = active ? "かぼちゃのダーツ" : "ダーツ";
+  drawWheel();
+}
+// Also restore an already-open page at the deadline, after sleep, or after returning to it.
+setInterval(syncHalloweenTheme, 30000);
+const untilHalloweenEnd = HALLOWEEN_END - Date.now();
+if(untilHalloweenEnd > 0 && untilHalloweenEnd < 2147483647) setTimeout(syncHalloweenTheme, untilHalloweenEnd);
+window.addEventListener("focus", syncHalloweenTheme);
+document.addEventListener("visibilitychange", syncHalloweenTheme);
 
 function drawWheel(){
   ctx.clearRect(0,0,size,size);
@@ -191,6 +260,10 @@ function drawWheel(){
   ctx.beginPath(); ctx.fillStyle="#111426"; ctx.arc(0,0,26,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.fillStyle="#ffd166"; ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.strokeStyle="#00000066"; ctx.lineWidth=2; ctx.arc(0,0,26,0,Math.PI*2); ctx.stroke();
+  if(halloweenActive){
+    ctx.lineWidth=4; ctx.strokeStyle="#ffbc70"; ctx.beginPath(); ctx.arc(0,0,r-8,0,Math.PI*2); ctx.stroke();
+    ctx.save(); ctx.font="34px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🎃",0,1); ctx.restore();
+  }
   // 盤に刺さったダーツ（先端は盤に埋まって見えないように、軸の一部と尾翼だけを描く。回転と一緒に動く）
   if(stuckDart){
     const a = stuckDart.localAngle + angle;
@@ -428,7 +501,10 @@ function beep(freq=1100, dur=0.06, vol=0.18){
   if(!audioCtx) return;
   const t0 = audioCtx.currentTime;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-  o.type="square"; o.frequency.setValueAtTime(freq,t0);
+  syncHalloweenTheme();
+  o.type=halloweenActive ? "sine" : "square";
+  o.frequency.setValueAtTime(halloweenActive ? freq*1.4 : freq,t0);
+  if(halloweenActive) o.frequency.exponentialRampToValueAtTime(Math.max(80,freq*0.65),t0+dur);
   g.gain.setValueAtTime(vol,t0);
   g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
   o.connect(g); g.connect(masterGain);
@@ -438,9 +514,11 @@ function beep(freq=1100, dur=0.06, vol=0.18){
 function errorBeep(){
   if(!audioCtx) return;
   const now = audioCtx.currentTime;
-  [[220,0],[170,0.10],[140,0.20]].forEach(([freq, delay])=>{
+  syncHalloweenTheme();
+  const errorNotes = halloweenActive ? [[311.13,0],[293.66,0.10],[155.56,0.20]] : [[220,0],[170,0.10],[140,0.20]];
+  errorNotes.forEach(([freq, delay])=>{
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-    o.type = "sawtooth";
+    o.type = halloweenActive ? "triangle" : "sawtooth";
     o.frequency.setValueAtTime(freq, now + delay);
     g.gain.setValueAtTime(0.001, now + delay);
     g.gain.linearRampToValueAtTime(0.22, now + delay + 0.015);
@@ -453,7 +531,8 @@ function errorBeep(){
 function winJingle(){
   if(!audioCtx) return;
   const now = audioCtx.currentTime;
-  const notes = [523.25,659.25,783.99,1046.5];
+  syncHalloweenTheme();
+  const notes = halloweenActive ? [523.25,622.25,739.99,1046.5] : [523.25,659.25,783.99,1046.5];
   notes.forEach((f,i)=>{
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
@@ -469,6 +548,7 @@ function winJingle(){
 }
 function thwack(){
   if(!audioCtx) return;
+  syncHalloweenTheme();
   const t0 = audioCtx.currentTime;
   const bufferSize = Math.floor(audioCtx.sampleRate * 0.08);
   const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -477,7 +557,7 @@ function thwack(){
   const noise = audioCtx.createBufferSource();
   noise.buffer = buffer;
   const filter = audioCtx.createBiquadFilter();
-  filter.type = "lowpass"; filter.frequency.setValueAtTime(1200,t0);
+  filter.type = "lowpass"; filter.frequency.setValueAtTime(halloweenActive ? 700 : 1200,t0);
   const ng = audioCtx.createGain();
   ng.gain.setValueAtTime(0.5,t0);
   ng.gain.exponentialRampToValueAtTime(0.001,t0+0.08);
@@ -485,14 +565,27 @@ function thwack(){
   noise.start(t0); noise.stop(t0+0.09);
   const o = audioCtx.createOscillator();
   const og = audioCtx.createGain();
-  o.type = "sine"; o.frequency.setValueAtTime(90,t0);
-  o.frequency.exponentialRampToValueAtTime(40,t0+0.12);
+  o.type = "sine"; o.frequency.setValueAtTime(halloweenActive ? 155.56 : 90,t0);
+  o.frequency.exponentialRampToValueAtTime(halloweenActive ? 51.91 : 40,t0+0.12);
   og.gain.setValueAtTime(0.4,t0);
   og.gain.exponentialRampToValueAtTime(0.001,t0+0.12);
   o.connect(og); og.connect(masterGain);
   o.start(t0); o.stop(t0+0.12);
 }
 function playWinnerBgm(){
+  syncHalloweenTheme();
+  if(halloweenActive && audioCtx){
+    const now=audioCtx.currentTime;
+    [1046.5,1244.5,1479.98,2093].forEach((freq,i)=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type="sine"; o.frequency.setValueAtTime(freq,now+i*0.09);
+      g.gain.setValueAtTime(0.0001,now+i*0.09);
+      g.gain.exponentialRampToValueAtTime(0.10,now+i*0.09+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,now+i*0.09+0.32);
+      o.connect(g); g.connect(masterGain); o.start(now+i*0.09); o.stop(now+i*0.09+0.33);
+      o.onended=()=>{o.disconnect();g.disconnect();};
+    });
+  }
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if(isIOS){ winJingle(); return; }
   const winAudio = new Audio("./brass-verdict.mp3?v=20260816-045");
